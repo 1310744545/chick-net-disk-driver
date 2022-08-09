@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>后台登录</title>
+    <script src="https://cdn.staticfile.org/jquery/1.10.2/jquery.min.js"></script>
+</head>
+<body>
+<div style="margin: 0 auto;width: 20%;height: 30%">
+    用户名：<input id="username"> <br><br>
+    密码: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input id="password" type="password"><br><br>
+    <button onclick="login()">登录</button>
+</div>
+</body>
+<script>
+    function login() {
+        var curWwwPath = window.document.location.href;
+        var pathname = window.document.location.pathname;
+        var pos = curWwwPath.indexOf(pathname);
+        var localhostPath = curWwwPath.substring(0, pos);
+
+        var username = $('#username').val();
+        var password = $('#password').val();
+
+        if (username == '' || username == undefined || username == null) {
+            alert("请输入用户名")
+        }
+        if (password == '' || password == undefined || password == null) {
+            alert("请输入密码")
+        }
+        $.ajax({
+            url: localhostPath + '/system/login',
+            type: 'post',
+            data: {
+                username: username,
+                password: password
+            },
+            success: function (res) {
+                if (res.code == 0) {
+                    window.location.replace(localhostPath + "/system/index");
+                } else {
+                    alert(res.msg)
+                }
+            }
+        });
+
+    }
+</script>
+</html>

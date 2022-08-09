@@ -1,0 +1,6 @@
+server:
+  port: 10086
+
+system:
+  username: admin
+  password: admin

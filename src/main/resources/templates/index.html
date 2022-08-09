@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>配置</title>
+    <script src="https://cdn.staticfile.org/jquery/1.10.2/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <!-- import Vue before Element -->
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <!-- import JavaScript -->
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <style>
+        * {
+            padding: 0;
+            margin: 0;
+        }
+
+        .el-row {
+            margin-bottom: 20px;
+
+        &
+        :last-child {
+            margin-bottom: 0;
+        }
+
+        }
+        .el-col {
+            border-radius: 4px;
+        }
+
+        .bg-purple-dark {
+            background: #99a9bf;
+        }
+
+        .bg-purple {
+            background: #d3dce6;
+        }
+
+        .bg-purple-light {
+            background: #e5e9f2;
+        }
+
+        .grid-content {
+            border-radius: 4px;
+            min-height: 36px;
+        }
+
+        .row-bg {
+            padding: 10px 0;
+            background-color: #f9fafc;
+        }
+
+        .el-card__body {
+            padding: 15px;
+        }
+
+        .el-progress-bar {
+            width: 80%;
+        }
+    </style>
+</head>
+<body>
+<div id="app" style="text-align: center;padding: 20px 40px;width: 80%;margin: 0 auto">
+    <h2> 👇可添加网盘列表👇 点击添加 (陆续开发中)</h2>
+    <el-divider></el-divider>
+    <el-row :gutter="20">
+        <el-col :span="6" v-for="item in supportedNetDisk" :key="item.index">
+            <a href="javascript:;" style="text-decoration:none" @click="addNetDisk(item.name)">
+                <el-card shadow="hover" style="margin: 0 0 20px 0;padding: 0;vertical-align: middle;">
+                    <el-image
+                            style="width: 50px; height: 50px;vertical-align:middle"
+                            :src="item.icon"
+                            fit="fill"></el-image>
+                    <span style="font-size: 30px;line-height: 50px;display: inline-block;vertical-align: middle;">
+                    &nbsp;&nbsp;{{item.name}}
+                </span>
+                </el-card>
+            </a>
+        </el-col>
+    </el-row>
+    <el-divider></el-divider>
+    <br>
+    <h2> 👇已添加网盘列表👇 </h2>
+    <el-divider></el-divider>
+    <el-table
+            :data="registerNetDisks"
+            style="width: 100%">
+        <el-table-column
+                label="图标"
+                width="80">
+            <template slot-scope="scope">
+                <el-image style="width: 30px; height: 30px;vertical-align:middle" :src="scope.row.icon"
+                          fit="fill"></el-image>
+            </template>
+        </el-table-column>
+        <el-table-column
+                prop="netDiskName"
+                label="网盘名"
+                width="120">
+        </el-table-column>
+        <el-table-column
+                prop="avatar"
+                width="80"
+                label="用户头像">
+            <template slot-scope="scope">
+                <el-image style="width: 30px; height: 30px;vertical-align:middle" :src="scope.row.avatar"
+                          fit="fill"></el-image>
+            </template>
+        </el-table-column>
+        <el-table-column
+                prop="userName"
+                width="150"
+                label="登录用户">
+        </el-table-column>
+        <el-table-column
+                prop="capacity"
+                width="600"
+                label="容量">
+            <template slot-scope="scope">
+                <div>
+                    <el-progress :stroke-width="12"
+                                 :percentage="calculateRate(scope.row.capacityTotal, scope.row.capacityUsed)"
+                                 :format="format(scope.row.capacityTotal, scope.row.capacityUsed)"></el-progress>
+                </div>
+            </template>
+        </el-table-column>
+        <el-table-column
+                prop="path"
+                width="120"
+                label="基础路径">
+        </el-table-column>
+        <el-table-column
+                width="300"
+                fixed="right"
+                label="操作">
+            <template slot-scope="scope">
+                <el-button v-on:click="editPath(scope.row.path)" size="small" type="primary">编辑</el-button>
+                <el-popconfirm title="确定删除吗？" @confirm="deletePath(scope.row.path)">
+                    <el-button size="small" type="danger" slot="reference">删除</el-button>
+                </el-popconfirm>
+<!--                <el-button v-on:click="deletePath(scope.row.path)" size="small" type="danger">删除</el-button>-->
+                <el-button v-on:click="goBase('/'+scope.row.path)" size="small" type="primary">跳转至根路径 <i
+                        class="el-icon-position"></i></el-button>
+            </template>
+        </el-table-column>
+    </el-table>
+    <el-dialog :title="netDiskNameNow" :visible.sync="dialogFormVisible" width="30%" v-loading="loading"
+               :close-on-click-modal="false">
+        <span> 👇请选择登录方式👇 (陆续开发中)</span>
+        <br>
+        <br>
+        <el-tabs v-model="loginTypeNow" type="card">
+            <br>
+            <br>
+            <el-tab-pane v-if="loginTypes.indexOf('refreshToken') !== -1" label="refreshToken" name="refreshToken">
+                <el-form label-width="120px" ref="refreshToken" :rules="refreshTokenRules" :model="refreshTokenFrom">
+                    <el-form-item label="refreshToken" prop="refreshToken" style="width: 90%">
+                        <el-input v-model="refreshTokenFrom.refreshToken"></el-input>
+                    </el-form-item>
+                </el-form>
+            </el-tab-pane>
+            <el-tab-pane v-if="loginTypes.indexOf('password') !== -1" label="password" name="password">
+                <el-form label-width="120px" ref="password" :rules="passwordRules" :model="passwordFrom">
+                    <el-form-item label="账号" prop="username" style="width: 90%">
+                        <el-input v-model="passwordFrom.username"></el-input>
+                    </el-form-item>
+                    <el-form-item label="密码" prop="password" style="width: 90%">
+                        <el-input v-model="passwordFrom.password"></el-input>
+                    </el-form-item>
+                </el-form>
+            </el-tab-pane>
+            <el-tab-pane v-if="loginTypes.indexOf('qrcode') !== -1" label="qrcode" name="qrcode">
+                <el-form label-width="120px">
+                    qrcode
+                </el-form>
+            </el-tab-pane>
+            <el-tab-pane v-if="loginTypes.indexOf('sms') !== -1" label="sms" name="sms">
+                <el-form label-width="120px" ref="sms" :rules="smsRules">
+                    <el-form-item label="sms" prop="sms" style="width: 90%">
+                        <el-input v-model="sms"></el-input>
+                    </el-form-item>
+                </el-form>
+            </el-tab-pane>
+        </el-tabs>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="dialogFormVisible = false">取 消</el-button>
+            <el-button type="primary" @click="netDiskRegister()">确 定</el-button>
+        </div>
+    </el-dialog>
+    <el-dialog title="基础路径" :visible.sync="dialogEditPath" width="30%" :close-on-click-modal="false">
+        <el-input v-model="editPathStr"></el-input>
+        <br>
+        <br>
+        <el-button @click="dialogEditPath = false">取 消</el-button>
+        <el-button type="primary" @click="submitEditPath()">确 定</el-button>
+    </el-dialog>
+</div>
+</body>
+<script>
+    new Vue({
+        el: '#app',
+        data: {
+            localhostPath: '',
+            supportedNetDisk: {},
+            loginTypes: [],
+            loginTypeNow: '',
+            netDiskNameNow: '',
+            sms: '',
+            dialogFormVisible: false,
+            dialogEditPath: false,
+            editPathOriginalStr: '',
+            editPathStr: '',
+            refreshTokenFrom: {
+                refreshToken: '',
+            },
+            passwordFrom: {
+                username: '',
+                password: '',
+            },
+            loading: false,
+            registerNetDisks: [],
+            refreshTokenRules: {
+                refreshToken: [
+                    {required: true, message: '请输入refreshToken', trigger: 'blur'}
+                ]
+            },
+            passwordRules: {
+                username: [
+                    {required: true, message: '请输入账号', trigger: 'blur'}
+                ],
+                password: [
+                    {required: true, message: '请输入密码', trigger: 'blur'}
+                ]
+            },
+            smsRules: {
+                sms: [
+                    {required: true, message: '请输入手机号', trigger: 'blur'}
+                ]
+            },
+        },
+        methods: {
+            getLocalHost() {
+                var curWwwPath = window.document.location.href;
+                var pathname = window.document.location.pathname;
+                var pos = curWwwPath.indexOf(pathname);
+                this.localhostPath = curWwwPath.substring(0, pos);
+            },
+            getSupportedNetDisk() {
+                var this_ = this;
+                axios.post(this.localhostPath + '/system/diskList').then(function (res) {
+                    if (res.data.code == 1) {
+                        this_.$message.error(res.data.msg);
+                        return;
+                    }
+                    this_.supportedNetDisk = res.data.data;
+                })
+            },
+            addNetDisk(netDiskName) {
+                this.netDiskNameNow = netDiskName;
+                this.dialogFormVisible = true;
+                var this_ = this;
+                var data = new URLSearchParams()
+                data.append('netDiskName', netDiskName)
+                axios.post(this.localhostPath + '/system/loginTypes', data).then(function (res) {
+                    if (res.data.code == 1) {
+                        this_.$message.error(res.data.msg);
+                        return;
+                    }
+                    this_.loginTypes = res.data.data;
+                    this_.loginTypeNow = res.data.data[0];
+                })
+            },
+            netDiskRegister() {
+                if ('refreshToken' === this.loginTypeNow) {
+                    this.$refs['refreshToken'].validate(valid => {
+                        if (!valid) {
+                            return;
+                        }
+                    })
+                }
+                if ('password' === this.loginTypeNow) {
+                    this.$refs['password'].validate(valid => {
+                        if (!valid) {
+                            return;
+                        }
+                    })
+                }
+                if ('sms' === this.loginTypeNow) {
+                    this.$refs['sms'].validate(valid => {
+                        if (!valid) {
+                            return;
+                        }
+                    })
+                }
+                this.loading = true;
+                var this_ = this;
+                var data = new URLSearchParams()
+                data.append('username', this.passwordFrom.username);
+                data.append('password', this.passwordFrom.password);
+                data.append('refreshToken', this.refreshTokenFrom.refreshToken);
+                data.append('accessToken', '');
+                data.append('name', this.netDiskNameNow);
+                data.append('loginType', this.loginTypeNow);
+                axios.post(this.localhostPath + '/system/netDiskRegister', data).then(function (res) {
+                    if (res.data.code == 1) {
+                        this_.$message.error(res.data.msg);
+                        return;
+                    }
+                    this_.$message.success('登录网盘成功');
+                    this_.loadRegisterNetDisk();
+                    this_.loading = false;
+                    this_.dialogFormVisible = false
+                })
+            },
+            loadRegisterNetDisk() {
+                var this_ = this;
+                axios.post(this.localhostPath + '/system/registerNetDisk').then(function (res) {
+                    if (res.data.code == 1) {
+                        this_.$message.error(res.data.msg);
+                        return;
+                    }
+                    this_.registerNetDisks = res.data.data;
+                    console.log(this_.registerNetDisks)
+                })
+            },
+            calculateRate(total, used) {
+                if (total === 0 || used === 0) {
+                    return 0
+                }
+                return parseInt(used / total * 100);
+            },
+            format(total, used) {
+                return () => {
+                    total = total / 1024 / 1024 / 1024 > 1024 ? (total / 1024 / 1024 / 1024 / 1024).toFixed(2) + "TB" : (total / 1024 / 1024 / 1024).toFixed(2) + "GB";
+                    used = total.indexOf('TB') !== -1 ? (used / 1024 / 1024 / 1024 / 1024).toFixed(2) + "TB" : (used / 1024 / 1024 / 1024).toFixed(2) + "GB";
+                    return used + "/" + total;
+                }
+            },
+            goBase(path) {
+                window.open(path, '_blank');
+            },
+            editPath(path) {
+                this.dialogEditPath = true;
+                this.editPathStr = path;
+                this.editPathOriginalStr = path;
+            },
+            submitEditPath() {
+                var this_ = this;
+                var data = new URLSearchParams();
+                data.append('editPathOriginalStr', this.editPathOriginalStr);
+                data.append('editPathStr', this.editPathStr);
+                axios.post(this.localhostPath + '/system/submitEditPath', data).then(function (res) {
+                    if (res.data.code == 1) {
+                        this_.$message.error(res.data.msg);
+                        return;
+                    }
+                    this_.$message.success('修改成功');
+                    this_.loadRegisterNetDisk();
+                    this_.dialogEditPath = false;
+                })
+            },
+            deletePath(path) {
+                var this_ = this;
+                axios.post(this.localhostPath + '/system/deletePath?path=' + path).then(function (res) {
+                    if (res.data.code == 1) {
+                        this_.$message.error(res.data.msg);
+                        return;
+                    }
+                    this_.$message.success('删除成功');
+                    this_.loadRegisterNetDisk();
+                })
+            }
+        },
+        created() {
+            this.getSupportedNetDisk();
+            this.getLocalHost();
+            this.loadRegisterNetDisk();
+        }
+    })
+</script>
+<script>
+    var curWwwPath = window.document.location.href;
+    var pathname = window.document.location.pathname;
+    var pos = curWwwPath.indexOf(pathname);
+    var localhostPath = curWwwPath.substring(0, pos);
+    var loginTypes;
+    var loginTypeNow;
+    var netDiskNameNow;
+    window.onload = function () {
+        // 加载支持的网盘
+        // loadSupportNetDisk()
+        // 加载已经登录的网盘
+        // loadAddEdNetDisk()
+    }
+
+    function loadRegisterNetDisk() {
+        diskStr = '';
+        $.ajax({
+            url: localhostPath + '/system/loginEdDiskList',
+            type: 'post',
+            success: function (res) {
+                console.log(res)
+            }
+        });
+    }
+</script>
+</html>
