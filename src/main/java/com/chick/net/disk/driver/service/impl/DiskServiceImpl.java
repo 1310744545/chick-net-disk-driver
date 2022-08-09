@@ -63,7 +63,7 @@ public class DiskServiceImpl implements DiskService {
             goReturn(ContentTypeEnum.HTML.getContentType(), resp, null, returnStr);
             return;
         }
-        // null：下载
+        // null：下载、不存在
         // 空list：空文件夹
         // list：文件列表
         List<NetDiskFile> fileList = netDiskClient.getNetDiskOperationEvent().getFileList(pathVO.getDriverPath(), pathVO.getBasePath(), resp);

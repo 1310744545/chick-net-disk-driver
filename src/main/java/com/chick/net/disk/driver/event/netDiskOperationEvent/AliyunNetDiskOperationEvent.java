@@ -67,75 +67,108 @@ public class AliyunNetDiskOperationEvent implements NetDiskOperationEvent {
         }
         // 先从缓存中获取每个文件夹，没有的去阿里云请求
         AliyunCacheFolder aliyunCacheFolderNow = null;
+        // 当前文件夹
         Map<String, AliyunCacheFolder> aliyunCacheFoldersMapNow = new HashMap<>();
         aliyunCacheFoldersMapNow.putAll(aliyunCacheFoldersMap);
-        String pathNow = "/" + netDiskClientPath;
-        for (String path : paths) {
-            pathNow = pathNow + "/" + path;
-            aliyunCacheFolderNow = aliyunCacheFoldersMapNow.get(path);
+        // 当前目录
+        StringBuilder pathNow = new StringBuilder("/" + netDiskClientPath);
+        // 遍历请求的目录
+        for (int index = 0; index < paths.size(); index++) {
+            //for (String path : paths) {
+            // 更改当前目录
+            pathNow.append("/").append(paths.get(index));
+            // 从当前文件夹中查找当前文件，可能为空、文件夹、file
+            aliyunCacheFolderNow = aliyunCacheFoldersMapNow.get(paths.get(index));
+            // 这里是root目录，也就是缓存里的，如果文件不为空且为file类型，直接进行下载
             if (!ObjectUtils.isEmpty(aliyunCacheFolderNow) && "file".equals(aliyunCacheFolderNow.getType())) {
                 // 进行下载操作
                 netDiskClient.getNetDiskOperationEvent().download(aliyunCacheFolderNow.getFileId(), netDiskClient, resp);
                 return null;
             }
-            if (paths.indexOf(path) == 0) {
-                // 只有一级目录时
-                AliyunCacheFolder aliyunCacheFolder = aliyunCacheFoldersMapNow.get(path);
-                if (ObjectUtils.isEmpty(aliyunCacheFolder)) {
+            if (index == 0) {
+                // 进到这里，说明开始有一个或以上的请求目录，这里要进行查找当前请求目录的子目录
+                // 1、从缓存中获取当前请求的一级目录，aliyunCacheFolder为当前目录
+                aliyunCacheFolderNow = aliyunCacheFoldersMapNow.get(paths.get(index));
+                // 2、如果缓存中没有，说明是新加的，重新请求根目录更新缓存
+                if (ObjectUtils.isEmpty(aliyunCacheFolderNow)) {
                     List<AliyunFile> items = httpGetFileList(netDiskClient, AliyunConfig.getFileListUrl, "root", "", new ArrayList<>());
                     for (AliyunFile aliyunFile : items) {
+                        // 更新缓存
                         aliyunCacheFoldersMap.put(aliyunFile.getName(), new AliyunCacheFolder(aliyunFile, "/" + pathNow));
+                        // 更新当前文件夹
                         aliyunCacheFoldersMapNow.putAll(aliyunCacheFoldersMap);
+                        // 更新当前文件
+                        aliyunCacheFolderNow = aliyunCacheFoldersMapNow.get(paths.get(index));
                     }
                 }
-                aliyunCacheFolder = aliyunCacheFoldersMapNow.get(path);
-                if (ObjectUtils.isEmpty(aliyunCacheFolder)) {
+                // 3、如果还找不到，返回错误
+                if (ObjectUtils.isEmpty(aliyunCacheFolderNow)) {
                     // 找不到路径
-                    log.error("找不到请求路径");
-                    return new ArrayList<>();
+                    try {
+                        resp.sendError(404,"访问的资源不存在");
+                    } catch (IOException e) {
+                        return null;
+                    }
+                    return null;
                 }
-                aliyunCacheFolderNow = aliyunCacheFolder;
+                // 4、再次判断是否是文件，如果是就进行下载，此处是避免前面想要下载时文件并不在缓存中
                 if (!ObjectUtils.isEmpty(aliyunCacheFolderNow) && "file".equals(aliyunCacheFolderNow.getType())) {
                     // 进行下载操作
                     netDiskClient.getNetDiskOperationEvent().download(aliyunCacheFolderNow.getFileId(), netDiskClient, resp);
                     return null;
                 }
+                // 5、如果是文件夹，则请求夏季目录，获取到items
                 List<AliyunFile> items = httpGetFileList(netDiskClient, AliyunConfig.getFileListUrl, aliyunCacheFolderNow.getFileId(), "", new ArrayList<>());
-                if (paths.indexOf(path) != paths.size() - 1) {
+                // 6、如果不是最后一级目录，清空当前文件夹，替换为新请求的文件夹
+                if (index != paths.size() - 1) {
                     aliyunCacheFoldersMapNow.clear();
                     for (AliyunFile aliyunFile : items) {
                         aliyunCacheFoldersMapNow.put(aliyunFile.getName(), new AliyunCacheFolder(aliyunFile, "/" + pathNow));
                     }
                     continue;
                 }
-                if (paths.indexOf(path) == paths.size() - 1) {
-                    return aliyunFilesToNetDiskFiles(items, "/" + netDiskClientPath, pathNow);
+                // 7、如果是最后一级目录，则直接返回请求到的文件目录
+                if (index == (paths.size() - 1)) {
+                    return aliyunFilesToNetDiskFiles(items, "/" + netDiskClientPath, pathNow.toString());
                 }
             } else {
-                // 有一级以上的路径时
-                aliyunCacheFolderNow = aliyunCacheFoldersMapNow.get(path);
+                // 进到此处，说明有二级及以上的目录
+                // 1、如果当前文件为空，返回错误
+                if (ObjectUtils.isEmpty(aliyunCacheFolderNow)) {
+                    // 找不到路径
+                    try {
+                        resp.sendError(404,"访问的资源不存在");
+                    } catch (IOException e) {
+                        return null;
+                    }
+                    return null;
+                }
+                // 2、如果当前文件是file类型的，则下载
                 if (!ObjectUtils.isEmpty(aliyunCacheFolderNow) && "file".equals(aliyunCacheFolderNow.getType())) {
                     // 进行下载操作
                     netDiskClient.getNetDiskOperationEvent().download(aliyunCacheFolderNow.getFileId(), netDiskClient, resp);
                     return null;
                 }
+                // 3、如果当前文件是文件夹，则请求子目录
                 List<AliyunFile> items = httpGetFileList(netDiskClient, AliyunConfig.getFileListUrl, aliyunCacheFolderNow.getFileId(), "", new ArrayList<>());
-                if (paths.indexOf(path) != paths.size() - 1) {
+                // 4、如果不是最后一级目录，更新当前文件夹
+                if (index != paths.size() - 1) {
                     aliyunCacheFoldersMapNow.clear();
                     for (AliyunFile aliyunFile : items) {
                         aliyunCacheFoldersMapNow.put(aliyunFile.getName(), new AliyunCacheFolder(aliyunFile, "/" + pathNow));
                     }
                     continue;
                 }
-                if (paths.indexOf(path) == paths.size() - 1) {
+                // 5、如果是最后一级目录，添加父目录，返回，如果不是，继续循环
+                if (index == paths.size() - 1) {
                     StringJoiner stringJoiner = new StringJoiner("/", "/", "");
                     stringJoiner.add(netDiskClientPath);
-                    for (String pathParent : paths) {
-                        if (!path.equals(pathParent)){
-                            stringJoiner.add(pathParent);
+                    for (int i = 0; i < paths.size(); i++) {
+                        if (i != paths.size() - 1) {
+                            stringJoiner.add(paths.get(i));
                         }
                     }
-                    return aliyunFilesToNetDiskFiles(items, stringJoiner.toString(), pathNow);
+                    return aliyunFilesToNetDiskFiles(items, stringJoiner.toString(), pathNow.toString());
                 }
             }
         }
