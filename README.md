@@ -37,11 +37,11 @@ java -jar chick-net-disk-driver-1.0.0-SNAPSHOT.jar --system.username="your usern
 # 参数说明
 ```bash
 --system.username
-   系统登录的用户名
+   非必填，系统登录的用户名、默认admin
 --system.password
-   系统登录的密码
+   非必填，系统登录的密码、默认admin
 --server.port
-    非必填，服务器端口号，默认为10086
+   非必填，服务器端口号，默认为10086
 ```
 # QQ群
 > 群号：594142389

@@ -44,7 +44,7 @@ public class WebFilter extends OncePerRequestFilter {
             // 网盘文件增删改操作
             String method = request.getMethod();
             switch (method) {
-                case "GET": // 网盘文件查询
+                case "GET": // 网盘文件查询、下载
                     diskService.get(request, response);
                     return;
                 case "POST": // 网盘文件修改
