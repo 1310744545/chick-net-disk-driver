@@ -1,5 +1,6 @@
 
-# Turn a cloud disk into a resource server
+# Turn a cloud disk into a resource server，Support unlimited binding
+# 让你的网盘秒变资源服务器，支持无限量绑定
 [![GitHub release](https://img.shields.io/github/v/release/1310744545/chick-net-disk-driver.svg)](https://github.com/1310744545/chick-net-disk-driver/releases)
 
 说明：[1.0.0版本](https://github.com/1310744545/chick-net-disk-driver/releases/tag/1.0.0)支持阿里云盘，实现最基本的资源访问功能
