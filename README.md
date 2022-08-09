@@ -1,4 +1,7 @@
 
+# Turn a cloud disk into a resource server
+[![GitHub release](https://img.shields.io/github/v/release/1310744545/chick-net-disk-driver.svg)](https://github.com/1310744545/chick-net-disk-driver/releases)
+
 说明：[1.0.0版本](https://github.com/1310744545/chick-net-disk-driver/releases/tag/1.0.0)支持阿里云盘，实现最基本的资源访问功能
 
 - [chick-net-disk-driver](#chick-net-disk-driver)
@@ -10,7 +13,6 @@
   - [Windows10](#windows10)
   - [Linux](#linux)
   - [Mac](#mac)
-- [客户端兼容性](#客户端兼容性)
 - [浏览器获取refreshToken方式](#浏览器获取refreshtoken方式)
 - [功能说明](#功能说明)
   - [支持的功能](#支持的功能)
@@ -33,8 +35,10 @@ java -jar chick-net-disk-driver-1.0.0-SNAPSHOT.jar --system.username="your usern
 
 # 参数说明
 ```bash
---aliyundrive.refresh-token
-    阿里云盘的refreshToken，获取方式见下文
+--system.username
+   系统登录的用户名
+--system.password
+   系统登录的密码
 --server.port
     非必填，服务器端口号，默认为10086
 ```
